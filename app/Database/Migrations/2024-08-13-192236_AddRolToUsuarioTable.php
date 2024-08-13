@@ -13,7 +13,7 @@ class AddRolToUsuarioTable extends Migration
                 'type'       => 'INT',
                 'unsigned'   => true,
                 'null'       => true,
-                'after'      => 'id_usuario',
+                'after'      => 'id',
             ]
         ]);
 

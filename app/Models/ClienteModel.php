@@ -4,20 +4,18 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class UsuarioModel extends Model
+class ClienteModel extends Model
 {
-    protected $table      = 'usuario';
-    protected $primaryKey = 'id';
+    protected $table            = 'cliente';
+    protected $primaryKey       = 'id';
+    protected $useAutoIncrement = true;
 
     protected $allowedFields = [
         'nombre', 
-        'primerApellido', 
-        'segundoApellido', 
-        'fechaNacimiento', 
+        'direccion', 
+        'telefono', 
+        'numDocumento', 
         'estado',
-        'email',   
-        'password' ,
-        'id_rol'  
     ];
 
 
@@ -25,5 +23,4 @@ class UsuarioModel extends Model
     protected $useTimestamps = true;
     protected $createdField  = 'fechaCreacion';
     protected $updatedField  = 'ultimaActualizacion';
-    
 }

@@ -28,7 +28,7 @@ class Usuario extends ResourceController
 
         // Buscar el usuario por email
         $user = $model->select('usuario.*, rol.nombre as rol_nombre, rol.descripcion as rol_descripcion')
-            ->join('rol', 'rol.id_rol = usuario.id_rol', 'left')
+            ->join('rol', 'rol.id = usuario.id_rol', 'left')
             ->where('usuario.email', $data['email'])
             ->first();
 
@@ -50,6 +50,49 @@ class Usuario extends ResourceController
             'message' => 'Inicio de sesión exitoso.',
             'user' => $user
         ]);
+    }
+
+
+    public function crearVendedor()
+    {
+        $model = new UsuarioModel();
+        $data = $this->request->getJSON(true);
+        $rules = [
+            'nombre'              => 'required|string|max_length[50]',
+            'primerApellido'      => 'required|string|max_length[50]',
+            'segundoApellido'     => 'permit_empty|string|max_length[50]',
+            'fechaNacimiento'     => 'required|valid_date[Y-m-d]',
+            'estado'              => 'permit_empty|integer|in_list[0,1]',
+            'fechaCreacion'       => 'permit_empty|valid_date[Y-m-d H:i:s]',
+            'ultimaActualizacion' => 'permit_empty|valid_date[Y-m-d H:i:s]',
+            'email'               => 'required|valid_email|is_unique[usuario.email]', // Validación
+            'password'            => 'required|string|min_length[8]'
+        ];
+
+        if (!$this->validate($rules)) {
+            return $this->failValidationErrors($this->validator->getErrors());
+        }
+
+        $data['password'] = password_hash($data['password'], PASSWORD_DEFAULT);
+        $data['id_rol'] = 2;
+
+
+        try {
+            $model->save($data);
+            $email = \Config\Services::email();
+
+            $email->setFrom('nvlab@northvelia.com', 'Tienda MIRAMAR');
+            $email->setTo($data['email']);
+            $email->setSubject('Bienvenido a nuestra empresa NOMBRE');
+            $email->setMessage('<p>Gracias por trabajar con nosotros. Click aquí para restablecer tu contraseña <a href="' . site_url('reset-password?token=' . $data['email']) . '">y</a> mantener tu seguridad.</p>');
+
+            if (!$email->send()) {
+                return $this->fail('Error al enviar el email');
+            }
+            return $this->respondCreated($data);
+        } catch (\Exception $e) {
+            return $this->fail($e->getMessage());
+        }
     }
 
     public function index()
