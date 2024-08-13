@@ -14,11 +14,15 @@ class UsuarioModel extends Model
         'primerApellido', 
         'segundoApellido', 
         'fechaNacimiento', 
-        'estado'
+        'estado',
+        'email',   
+        'password'  
     ];
+
 
     // Habilitar timestamps
     protected $useTimestamps = true;
     protected $createdField  = 'fechaCreacion';
     protected $updatedField  = 'ultimaActualizacion';
+    
 }

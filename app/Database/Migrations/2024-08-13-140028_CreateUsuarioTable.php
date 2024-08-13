@@ -33,6 +33,7 @@ class CreateUsuarioTable extends Migration
             'estado'              => [
                 'type'           => 'TINYINT',
                 'constraint'     => '1',
+                'default'        => 1,
             ],
             'fechaCreacion'       => [
                 'type'           => 'DATETIME',
