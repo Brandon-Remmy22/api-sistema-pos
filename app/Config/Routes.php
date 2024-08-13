@@ -7,3 +7,5 @@ use CodeIgniter\Router\RouteCollection;
  */
 $routes->get('/', 'Home::index');
 $routes->resource('usuario');
+$routes->resource('rol');
+$routes->post('login', 'Usuario::login');

@@ -13,6 +13,45 @@ class Usuario extends ResourceController
      *
      * @return ResponseInterface
      */
+
+    public function login()
+    {
+        $model = new UsuarioModel();
+
+        // Obtener los datos de la solicitud (suponiendo que vienen en JSON)
+        $data = $this->request->getJSON(true);
+
+        // Validar las credenciales
+        if (empty($data['email']) || empty($data['password'])) {
+            return $this->failValidationErrors('El email y la contraseña son obligatorios.');
+        }
+
+        // Buscar el usuario por email
+        $user = $model->select('usuario.*, rol.nombre as rol_nombre, rol.descripcion as rol_descripcion')
+            ->join('rol', 'rol.id_rol = usuario.id_rol', 'left')
+            ->where('usuario.email', $data['email'])
+            ->first();
+
+        if (!$user) {
+            return $this->failNotFound('Usuario no encontrado.');
+        }
+
+        // Verificar la contraseña
+        if (!password_verify($data['password'], $user['password'])) {
+            return $this->failUnauthorized('Contraseña incorrecta.');
+        }
+
+        // Si las credenciales son correctas, devolver la información del usuario
+        // (No incluir la contraseña en la respuesta)
+        unset($user['password']);
+
+        return $this->respond([
+            'status' => 200,
+            'message' => 'Inicio de sesión exitoso.',
+            'user' => $user
+        ]);
+    }
+
     public function index()
     {
         $model = new UsuarioModel();
@@ -51,9 +90,7 @@ class Usuario extends ResourceController
     public function create()
     {
         $model = new UsuarioModel();
-
-        // Validación de los datos de entrada
-        $validation = \Config\Services::validation();
+        $data = $this->request->getJSON(true);
         $rules = [
             'nombre'              => 'required|string|max_length[50]',
             'primerApellido'      => 'required|string|max_length[50]',
@@ -63,25 +100,16 @@ class Usuario extends ResourceController
             'fechaCreacion'       => 'permit_empty|valid_date[Y-m-d H:i:s]',
             'ultimaActualizacion' => 'permit_empty|valid_date[Y-m-d H:i:s]',
             'email'               => 'required|valid_email|is_unique[usuario.email]', // Validación
-            'password'            => 'required|string|min_length[8]' 
+            'password'            => 'required|string|min_length[8]'
         ];
 
         if (!$this->validate($rules)) {
             return $this->failValidationErrors($this->validator->getErrors());
         }
 
-        // Obtener los datos de entrada
-        $data = [
-            'nombre'              => $this->request->getPost('nombre'),
-            'primerApellido'      => $this->request->getPost('primerApellido'),
-            'segundoApellido'     => $this->request->getPost('segundoApellido'),
-            'fechaNacimiento'     => $this->request->getPost('fechaNacimiento'),
-            'estado'              => $this->request->getPost('estado') ?? 1,
-            'fechaCreacion'       => $this->request->getPost('fechaCreacion'),
-            'ultimaActualizacion' => $this->request->getPost('ultimaActualizacion'),
-            'email'               => $this->request->getPost('email'),
-            'password'            => $this->request->getPost('password'),
-        ];
+        $data['password'] = password_hash($data['password'], PASSWORD_DEFAULT);
+        $data['id_rol'] = 1;
+
 
         try {
             $model->save($data);
@@ -112,7 +140,42 @@ class Usuario extends ResourceController
      */
     public function update($id = null)
     {
-        //
+        $model = new UsuarioModel();
+        $data = $this->request->getJSON(true);
+        // Validación de los datos de entrada
+        $rules = [
+            'nombre'              => 'required|string|max_length[50]',
+            'primerApellido'      => 'required|string|max_length[50]',
+            'segundoApellido'     => 'permit_empty|string|max_length[50]',
+            'fechaNacimiento'     => 'required|valid_date[Y-m-d]',
+            'estado'              => 'permit_empty|integer|in_list[0,1]',
+            'fechaCreacion'       => 'permit_empty|valid_date[Y-m-d H:i:s]',
+            'ultimaActualizacion' => 'permit_empty|valid_date[Y-m-d H:i:s]',
+            'email'               => 'required|valid_email',
+            'password'            => 'permit_empty|string|min_length[8]'
+        ];
+
+        if (!$this->validate($rules)) {
+            return $this->failValidationErrors($this->validator->getErrors());
+        }
+
+        $usuario = $model->find($id);
+        if (!$usuario) {
+            return $this->failNotFound('Usuario no encontrado');
+        }
+
+        // Encriptar la contraseña si se proporciona
+        if (!empty($data['password'])) {
+            $data['password'] = password_hash($data['password'], PASSWORD_DEFAULT);
+        } else {
+            // Si no se proporciona una nueva contraseña, conservar la actual
+            $data['password'] = $usuario['password'];
+        }
+
+        // Actualizar los datos
+        $model->update($id, $data);
+
+        return $this->respondUpdated($data);
     }
 
     /**
@@ -124,6 +187,19 @@ class Usuario extends ResourceController
      */
     public function delete($id = null)
     {
-        //
+        $model = new UsuarioModel();
+
+        // Verificar si el usuario existe
+        if (!$model->find($id)) {
+            return $this->failNotFound('Usuario no encontrado');
+        }
+
+        // Realizar la eliminación lógica
+        $data = ['estado' => 0];
+        if ($model->update($id, $data)) {
+            return $this->respondDeleted(['message' => 'Usuario eliminado lógicamente']);
+        } else {
+            return $this->failServerError('No se pudo eliminar el usuario');
+        }
     }
 }
