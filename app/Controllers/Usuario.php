@@ -81,10 +81,11 @@ class Usuario extends ResourceController
             $model->save($data);
             $email = \Config\Services::email();
 
-            $email->setFrom('nvlab@northvelia.com', 'Tienda MIRAMAR');
+            $email->setFrom('nvlab@northvelia.com', 'LEYDIS FASHION');
             $email->setTo($data['email']);
-            $email->setSubject('Bienvenido a nuestra empresa NOMBRE');
-            $email->setMessage('<p>Gracias por trabajar con nosotros. Click aquí para restablecer tu contraseña <a href="' . site_url('reset-password?token=' . $data['email']) . '">y</a> mantener tu seguridad.</p>');
+            $email->setSubject('Bienvenido a LEYDIS FASHION');
+            //$email->setMessage('<p>Gracias por trabajar con nosotros. Click aquí para restablecer tu contraseña <a href="' . site_url('reset-password?token=' . $data['email']) . '">INGRESA AQUI</a> mantener tu seguridad.</p>');
+            $email->setMessage('<p>Gracias por trabajar con nosotros. Click aquí para restablecer tu contraseña <a href="http://localhost:5173/cambiar-contrasenia?token=' . $data['email'] . '">INGRESA AQUI</a> para mantener tu seguridad.</p>');
 
             if (!$email->send()) {
                 return $this->fail('Error al enviar el email');
@@ -98,7 +99,8 @@ class Usuario extends ResourceController
     public function index()
     {
         $model = new UsuarioModel();
-        $data['usuarios'] = $model->findAll();
+        $data['usuarios'] = $model->select('usuario.*, rol.nombre as rol_nombre, rol.descripcion as rol_descripcion')
+            ->join('rol', 'rol.id = usuario.id_rol', 'left')->where('usuario.estado', 1)->findAll();
 
         return $this->respond($data);
     }
@@ -138,7 +140,7 @@ class Usuario extends ResourceController
             'nombre'              => 'required|string|max_length[50]',
             'primerApellido'      => 'required|string|max_length[50]',
             'segundoApellido'     => 'permit_empty|string|max_length[50]',
-            'fechaNacimiento'     => 'required|valid_date[Y-m-d]',
+            'fechaNacimiento'     => 'permit_empty|valid_date[Y-m-d]',
             'estado'              => 'permit_empty|integer|in_list[0,1]',
             'fechaCreacion'       => 'permit_empty|valid_date[Y-m-d H:i:s]',
             'ultimaActualizacion' => 'permit_empty|valid_date[Y-m-d H:i:s]',
@@ -195,7 +197,7 @@ class Usuario extends ResourceController
             'fechaCreacion'       => 'permit_empty|valid_date[Y-m-d H:i:s]',
             'ultimaActualizacion' => 'permit_empty|valid_date[Y-m-d H:i:s]',
             'email'               => 'required|valid_email',
-            'password'            => 'permit_empty|string|min_length[8]'
+            // 'password'            => 'permit_empty|string|min_length[8]'
         ];
 
         if (!$this->validate($rules)) {
@@ -221,6 +223,39 @@ class Usuario extends ResourceController
         return $this->respondUpdated($data);
     }
 
+
+    public function changePassword()
+    {
+        $model = new UsuarioModel();
+        $data = $this->request->getJSON(true);
+        // Validación de los datos de entrada
+        $rules = [
+            'email'               => 'required|valid_email',
+            'password'            => 'permit_empty|string|min_length[8]'
+        ];
+
+        if (!$this->validate($rules)) {
+            return $this->failValidationErrors($this->validator->getErrors());
+        }
+
+        $usuario = $model->where('email', $data['email'])->first();
+        if (!$usuario) {
+            return $this->failNotFound('Usuario no encontrado');
+        }
+
+        // Encriptar la contraseña si se proporciona
+        if (!empty($data['password'])) {
+            $data['password'] = password_hash($data['password'], PASSWORD_DEFAULT);
+        } else {
+            // Si no se proporciona una nueva contraseña, conservar la actual
+            $data['password'] = $usuario['password'];
+        }
+        // Actualizar los datos
+        $id = $usuario['id'];
+        $model->update($id, $data);
+
+        return $this->respondUpdated($data);
+    }
     /**
      * Delete the designated resource object from the model.
      *

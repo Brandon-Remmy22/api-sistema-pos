@@ -51,6 +51,7 @@ class Filters extends BaseFilters
      */
     public array $required = [
         'before' => [
+            'cors',
             'forcehttps', // Force Global Secure Requests
             'pagecache',  // Web Page Caching
         ],
@@ -69,6 +70,7 @@ class Filters extends BaseFilters
      */
     public array $globals = [
         'before' => [
+            
             // 'honeypot',
             // 'csrf',
             // 'invalidchars',
@@ -103,5 +105,11 @@ class Filters extends BaseFilters
      *
      * @var array<string, array<string, list<string>>>
      */
-    public array $filters = [];
+    public array $filters = [
+
+        'cors' => [
+            'before' => ['*'],
+            'after'  => ['*'],
+        ],
+    ];
 }
