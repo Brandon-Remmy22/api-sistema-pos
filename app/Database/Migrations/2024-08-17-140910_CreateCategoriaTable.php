@@ -27,6 +27,14 @@ class CreateCategoriaTable extends Migration
                 'constraint' => 1,
                 'default'    => 1,
             ],
+            'fechaCreacion'  => [
+                'type'       => 'DATETIME',
+                'null'       => true,
+            ],
+            'ultimaActualizacion' => [
+                'type'       => 'DATETIME',
+                'null'       => true,
+            ]
         ]);
         $this->forge->addKey('id', true);
         $this->forge->createTable('categoria');

@@ -16,5 +16,8 @@ $routes->group('/api', ['filter' => 'cors'], static function (RouteCollection $r
     $routes->resource('cliente');
     $routes->post('login', 'Usuario::login');
     $routes->post('cambiar-contrasenia', 'Usuario::changePassword');
+    $routes->resource('producto');
+    $routes->resource('categoria'); 
+    $routes->post('subir-imagen', 'Producto::uploadImg');
     
 });
