@@ -11,10 +11,10 @@ class VentaModel extends Model
     protected $useAutoIncrement = true;
 
     protected $allowedFields = [
-        'total', 
-        'num_documento', 
-        'serie', 
-        'descuento', 
+        'total',
+        'num_documento',
+        'serie',
+        'descuento',
         'igv',
         'subtotal',
         'estado',
@@ -23,7 +23,21 @@ class VentaModel extends Model
         'id_comprobante'
     ];
 
+    public function getVentasWithCliente()
+    {
+        $ventas = $this->select('venta.*, cliente.nombre AS nombre_cliente')
+            ->join('cliente', 'venta.id_cliente = cliente.id')
+            ->where('venta.estado', 1)
+            ->findAll();
 
+        $detalleModel = new \App\Models\DetalleModel();
+
+        foreach ($ventas as &$venta) {
+            $venta['productos'] = $detalleModel->getProductosByVentaId($venta['id']);
+        }
+
+        return $ventas;
+    }
     // Habilitar timestamps
     protected $useTimestamps = true;
     protected $createdField  = 'fechaCreacion';

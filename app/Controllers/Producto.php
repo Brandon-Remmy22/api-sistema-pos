@@ -12,8 +12,8 @@ class Producto extends ResourceController
     public function index()
     {
         $model = new ProductoModel();
-        $data['productos'] = $model->where('estado', 1)->findAll();
-
+        $data['productos'] = $model->select('producto.*, categoria.nombre as categoria_nombre,')
+        ->join('categoria', 'categoria.id = producto.id_categoria', 'left')->where('producto.estado', 1)->findAll();
         return $this->respond($data);
     }
 

@@ -3,6 +3,8 @@
 namespace App\Controllers;
 
 use App\Controllers\BaseController;
+use App\Models\ComprobanteModel;
+use App\Models\DetalleModel;
 use App\Models\VentaModel;
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\RESTful\ResourceController;
@@ -18,8 +20,8 @@ class Venta extends ResourceController
     public function index()
     {
         $model = new VentaModel();
-        $data['ventas'] = $model->where('estado', 1)->findAll();
-    
+        //$data['ventas'] = $model->where('estado', 1)->findAll();
+        $data['ventas'] = $model->getVentasWithCliente();
         return $this->respond($data);
     }
 
@@ -41,6 +43,7 @@ class Venta extends ResourceController
     {
         // Reglas de validación
         $model = new VentaModel();
+        $detalleVentaModel = new DetalleModel();
         $data = $this->request->getJSON(true);
         $rules = [
             'total'         => 'required|decimal',
@@ -66,10 +69,63 @@ class Venta extends ResourceController
         }
 
         try {
+
+            $ultimoDocumento = $model->selectMax('num_documento')->first();
+            $nuevoNumeroDocumento = isset($ultimoDocumento['num_documento']) ? $ultimoDocumento['num_documento'] + 1 : 1;
+    
+            // Agregar el nuevo número de documento a los datos
+            $data['num_documento'] = $nuevoNumeroDocumento;
+
             $model->save($data);
+            $idVenta = $model->getInsertID();
+
+            // Guardar los detalles de la venta
+            $productos = $data['productos'];
+            $precios = $data['precios'];
+            $cantidades = $data['cantidades'];
+            $importes = $data['importes'];
+            $idComprobante = $data['id_comprobante'];
+        
+            // Llamar al método para actualizar la cantidad en el comprobante
+            $this->updateComprobante($idComprobante);
+
+            $this->save_detalle($detalleVentaModel, $productos, $idVenta, $precios, $cantidades, $importes);
+
             return $this->respondCreated($data);
         } catch (\Exception $e) {
             return $this->fail($e->getMessage());
+        }
+    }
+
+    protected function save_detalle($detalleVentaModel, $productos, $idVenta, $precios, $cantidades, $importes)
+    {
+        for ($i = 0; $i < count($productos); $i++) {
+            $data = [
+                'id_producto' => $productos[$i],
+                'id_venta' => $idVenta,
+                'precio' => $precios[$i],
+                'cantidad' => $cantidades[$i],
+                'importe' => $importes[$i],
+                'fecha_creacion' => date('Y-m-d H:i:s'),
+                'fecha_actualizacion' => date('Y-m-d H:i:s'),
+                'eliminado' => "0"
+            ];
+            $detalleVentaModel->save($data);
+
+            // Aquí puedes añadir lógica para actualizar el inventario de productos
+            // $this->updateProducto($productos[$i], $cantidades[$i]);
+        }
+    }
+
+    protected function updateComprobante($idComprobante)
+    {
+        $comprobanteModel = new ComprobanteModel();
+        $comprobanteActual = $comprobanteModel->find($idComprobante);
+
+        if ($comprobanteActual) {
+            $newCantidad = $comprobanteActual['catindad'] + 1;
+
+            $comprobanteModel->update($idComprobante, ['catindad' => $newCantidad]);
         }
     }
 
