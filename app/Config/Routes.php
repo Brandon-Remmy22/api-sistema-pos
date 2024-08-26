@@ -21,5 +21,5 @@ $routes->group('/api', ['filter' => 'cors'], static function (RouteCollection $r
     $routes->resource('venta'); 
     $routes->resource('comprobante'); 
     $routes->post('subir-imagen', 'Producto::uploadImg');
-    
+    $routes->get('reporte/ventas', 'Venta::obtenerReporteVentas');
 });

@@ -72,7 +72,7 @@ class Venta extends ResourceController
 
             $ultimoDocumento = $model->selectMax('num_documento')->first();
             $nuevoNumeroDocumento = isset($ultimoDocumento['num_documento']) ? $ultimoDocumento['num_documento'] + 1 : 1;
-    
+
             // Agregar el nuevo número de documento a los datos
             $data['num_documento'] = $nuevoNumeroDocumento;
 
@@ -85,7 +85,7 @@ class Venta extends ResourceController
             $cantidades = $data['cantidades'];
             $importes = $data['importes'];
             $idComprobante = $data['id_comprobante'];
-        
+
             // Llamar al método para actualizar la cantidad en el comprobante
             $this->updateComprobante($idComprobante);
 
@@ -188,5 +188,26 @@ class Venta extends ResourceController
         } else {
             return $this->failServerError('No se pudo eliminar el Venta');
         }
+    }
+
+    public function obtenerReporteVentas()
+    {
+        $model = new VentaModel();
+
+        // Total de ventas
+        $totalVentas = $model->selectSum('total')->where('estado', 1)->first();
+
+        // Total de ventas por día
+        $totalVentasPorDia = $model->select("DATE(fechaCreacion) as fecha, SUM(total) as total_ventas")
+            ->where('estado', 1)
+            ->groupBy("DATE(fechaCreacion)")
+            ->findAll();
+
+        $data = [
+            'total_ventas' => $totalVentas['total'],
+            'ventas_por_dia' => $totalVentasPorDia,
+        ];
+
+        return $this->respond($data);
     }
 }
