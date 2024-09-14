@@ -210,4 +210,21 @@ class Venta extends ResourceController
 
         return $this->respond($data);
     }
+
+    public function productosMasVendidos()
+    {
+         $model = new DetalleModel();
+
+        // $data['ventas'] = $model->where('estado', 1)->join('producto', 'producto.id = detalle.id_producto', 'left')->findAll();
+
+        // return $this->respond($data);
+
+        $data['ventas'] = $model
+            ->select('detalle.*, producto.nombre as producto_nombre, producto.precio as producto_precio') // Selecciona campos de ambas tablas
+            ->where('detalle.estado', 1) // Filtra solo los detalles activos
+            ->join('producto', 'producto.id = detalle.id_producto', 'left') // Une la tabla producto
+            ->findAll(); // Obtén todos los resultados
+
+        return $this->respond($data);
+    }
 }

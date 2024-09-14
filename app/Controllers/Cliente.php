@@ -15,10 +15,8 @@ class Cliente extends ResourceController
      */
     public function index()
     {
-
         $model = new ClienteModel();
         $data['clientes'] = $model->where('estado', 1)->findAll();
-    
         return $this->respond($data);
     }
 
