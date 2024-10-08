@@ -39,6 +39,18 @@ class CreateProductoTable extends Migration
                 'type'       => 'TEXT',
                 'null'       => true,
             ],
+            'sexo' => [
+                'type'       => 'TEXT',
+                'null'       => true,
+            ],
+            'talla' => [
+                'type'       => 'TEXT',
+                'null'       => true,
+            ],
+            'color' => [
+                'type'       => 'TEXT',
+                'null'       => true,
+            ],
             'id_categoria' => [
                 'type'       => 'INT',
                 'null'       => true,

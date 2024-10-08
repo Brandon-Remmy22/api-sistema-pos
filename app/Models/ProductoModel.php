@@ -16,6 +16,9 @@ class ProductoModel extends Model
         'precio', 
         'stock', 
         'codigo',
+        'sexo',
+        'talla',
+        'color',
         'img',
         'estado',
         'id_categoria'

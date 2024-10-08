@@ -27,7 +27,7 @@ class VentaModel extends Model
     {
         $ventas = $this->select('venta.*, cliente.nombre AS nombre_cliente, cliente.numDocumento AS ci')
             ->join('cliente', 'venta.id_cliente = cliente.id')
-            ->where('venta.estado', 1)
+            // ->where('venta.estado', 1)
             ->findAll();
 
         $detalleModel = new \App\Models\DetalleModel();

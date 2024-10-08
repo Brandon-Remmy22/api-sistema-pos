@@ -13,7 +13,7 @@ class Producto extends ResourceController
     {
         $model = new ProductoModel();
         $data['productos'] = $model->select('producto.*, categoria.nombre as categoria_nombre,')
-        ->join('categoria', 'categoria.id = producto.id_categoria', 'left')->where('producto.estado', 1)->findAll();
+            ->join('categoria', 'categoria.id = producto.id_categoria', 'left')->where('producto.estado', 1)->findAll();
         return $this->respond($data);
     }
 
@@ -42,6 +42,9 @@ class Producto extends ResourceController
             'stock'               => 'required|decimal',
             'codigo'              => 'required|string|max_length[50]',
             'img'                 => 'permit_empty|string',
+            'sexo'                 => 'permit_empty|string',
+            'talla'                 => 'permit_empty|string',
+            'color'                 => 'permit_empty|string',
             'id_categoria'        => 'permit_empty|integer',
             'estado'              => 'permit_empty|integer|in_list[0,1]',
             'fechaCreacion'       => 'permit_empty|valid_date[Y-m-d H:i:s]',
@@ -102,6 +105,9 @@ class Producto extends ResourceController
             'stock'               => 'required|decimal',
             'codigo'              => 'required|string|max_length[50]',
             'img'                 => 'permit_empty|string',
+            'sexo'                 => 'permit_empty|string',
+            'talla'                 => 'permit_empty|string',
+            'color'                 => 'permit_empty|string',
             'id_categoria'        => 'permit_empty|integer',
             'estado'              => 'permit_empty|integer|in_list[0,1]',
             'fechaCreacion'       => 'permit_empty|valid_date[Y-m-d H:i:s]',

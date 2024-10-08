@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Controllers\BaseController;
 use App\Models\ComprobanteModel;
 use App\Models\DetalleModel;
+use App\Models\ProductoModel;
 use App\Models\VentaModel;
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\RESTful\ResourceController;
@@ -44,6 +45,7 @@ class Venta extends ResourceController
         // Reglas de validación
         $model = new VentaModel();
         $detalleVentaModel = new DetalleModel();
+        $articuloModel = new ProductoModel();
         $data = $this->request->getJSON(true);
         $rules = [
             'total'         => 'required|decimal',
@@ -89,7 +91,7 @@ class Venta extends ResourceController
             // Llamar al método para actualizar la cantidad en el comprobante
             $this->updateComprobante($idComprobante);
 
-            $this->save_detalle($detalleVentaModel, $productos, $idVenta, $precios, $cantidades, $importes);
+            $this->save_detalle($detalleVentaModel, $articuloModel, $productos, $idVenta, $precios, $cantidades, $importes);
 
             return $this->respondCreated($data);
         } catch (\Exception $e) {
@@ -97,7 +99,7 @@ class Venta extends ResourceController
         }
     }
 
-    protected function save_detalle($detalleVentaModel, $productos, $idVenta, $precios, $cantidades, $importes)
+    protected function save_detalle($detalleVentaModel, $articuloModel, $productos, $idVenta, $precios, $cantidades, $importes)
     {
         for ($i = 0; $i < count($productos); $i++) {
             $data = [
@@ -112,8 +114,19 @@ class Venta extends ResourceController
             ];
             $detalleVentaModel->save($data);
 
-            // Aquí puedes añadir lógica para actualizar el inventario de productos
-            // $this->updateProducto($productos[$i], $cantidades[$i]);
+            // Actualizar el stock en la tabla de articulos
+            $articulo = $articuloModel->find($productos[$i]);
+            if ($articulo) {
+                $nuevoStock = $articulo['stock'] - $cantidades[$i];
+
+                // Validar que el stock no sea negativo
+                if ($nuevoStock < 0) {
+                    return $this->fail("Stock insuficiente para el producto con ID: " . $productos[$i]);
+                }
+
+                // Actualizar el stock en la base de datos
+                $articuloModel->update($productos[$i], ['stock' => $nuevoStock]);
+            }
         }
     }
 
@@ -175,18 +188,23 @@ class Venta extends ResourceController
     public function delete($id = null)
     {
         $model = new VentaModel();
+        $detalle = new DetalleModel();
 
-        // Verificar si el usuario existe
-        if (!$model->find($id)) {
-            return $this->failNotFound('Venta no encontrado');
+        // Verificar si la venta existe
+        $venta = $model->find($id);
+        if (!$venta) {
+            return $this->failNotFound('Venta no encontrada');
         }
 
-        // Realizar la eliminación lógica
+        // Actualizar el estado de todos los detalles asociados a la venta
+        $detalle->where('id_venta', $id)->set(['estado' => 0])->update();
+
+        // Realizar la eliminación lógica de la venta
         $data = ['estado' => 0];
         if ($model->update($id, $data)) {
-            return $this->respondDeleted(['message' => 'Venta eliminado lógicamente']);
+            return $this->respondDeleted(['message' => 'Venta eliminada lógicamente']);
         } else {
-            return $this->failServerError('No se pudo eliminar el Venta');
+            return $this->failServerError('No se pudo eliminar la Venta');
         }
     }
 
@@ -194,9 +212,10 @@ class Venta extends ResourceController
     {
         $model = new VentaModel();
 
+        $productoModel = new ProductoModel();
         // Total de ventas
         $totalVentas = $model->selectSum('total')->where('estado', 1)->first();
-
+        $totalStock = $productoModel->selectSum('stock')->first();
         // Total de ventas por día
         $totalVentasPorDia = $model->select("DATE(fechaCreacion) as fecha, SUM(total) as total_ventas")
             ->where('estado', 1)
@@ -206,6 +225,7 @@ class Venta extends ResourceController
         $data = [
             'total_ventas' => $totalVentas['total'],
             'ventas_por_dia' => $totalVentasPorDia,
+            'stock' => $totalStock['stock']
         ];
 
         return $this->respond($data);
@@ -213,7 +233,11 @@ class Venta extends ResourceController
 
     public function productosMasVendidos()
     {
-         $model = new DetalleModel();
+        $model = new DetalleModel();
+
+
+
+
 
         // $data['ventas'] = $model->where('estado', 1)->join('producto', 'producto.id = detalle.id_producto', 'left')->findAll();
 
@@ -224,7 +248,17 @@ class Venta extends ResourceController
             ->where('detalle.estado', 1) // Filtra solo los detalles activos
             ->join('producto', 'producto.id = detalle.id_producto', 'left') // Une la tabla producto
             ->findAll(); // Obtén todos los resultados
-
         return $this->respond($data);
+    }
+
+    public function getTotalStock()
+    {
+        $model = new ProductoModel();
+
+        // Realiza la suma total del stock
+        $totalStock = $model->selectSum('stock')->first();
+
+        // Retorna la suma total como un valor JSON
+        return $this->respond(['total_stock' => $totalStock['stock']]);
     }
 }
