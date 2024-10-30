@@ -62,7 +62,7 @@ class Cliente extends ResourceController
         $data = $this->request->getJSON(true);
         $rules = [
             'nombre'              => 'required|string|max_length[100]',
-            'direccion'           => 'required|string|max_length[200]',
+            'direccion'           => 'permit_empty|string|max_length[200]',
             'telefono'            => 'permit_empty|string|max_length[50]',
             'numDocumento'        => 'permit_empty|string|max_length[50]',
             'estado'              => 'permit_empty|integer|in_list[0,1]',
@@ -71,6 +71,10 @@ class Cliente extends ResourceController
         ];
         if (!$this->validate($rules)) {
             return $this->failValidationErrors($this->validator->getErrors());
+        }
+
+        if ($model->where('numDocumento', $data['numDocumento'])->first()) {
+            return $this->fail('El número de documento ya está registrado.', 409);
         }
 
         try {
@@ -91,6 +95,32 @@ class Cliente extends ResourceController
     public function edit($id = null)
     {
         //
+    }
+
+    public function filterClients()
+    {
+        // Obtener el parámetro de búsqueda desde la request
+        $buscar = $this->request->getGet('buscar');
+
+        // Si no hay búsqueda o tiene menos de 4 caracteres, devolver una lista vacía
+        if (is_null($buscar) || strlen(trim($buscar)) < 3) {
+            return $this->respond([], ResponseInterface::HTTP_OK);
+        }
+
+        // Crear instancia del modelo
+        $model = new ClienteModel();
+
+        // Construir la consulta para buscar por 'nombre' con estado activo
+        $resultados = $model
+            ->where('estado', 1)
+            ->groupStart() // Agrupar las condiciones dentro de un OR
+            ->like('nombre', $buscar)
+            ->groupEnd()
+            ->orderBy('fechaCreacion', 'DESC') // Ordenar por fecha de creación
+            ->findAll();
+
+        // Retornar los resultados en formato JSON
+        return $this->respond($resultados, ResponseInterface::HTTP_OK);
     }
 
     /**

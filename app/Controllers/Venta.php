@@ -40,6 +40,30 @@ class Venta extends ResourceController
         return $this->respond($cliente);
     }
 
+    public function ventasPorCliente($id_cliente)
+    {
+        $model = new VentaModel();
+    
+        $ventas = $model
+            ->select('venta.id as venta_id, venta.fechaCreacion, venta.total, 
+                      detalle.cantidad, producto.nombre as producto_nombre, 
+                      producto.precio as producto_precio')
+            ->join('detalle', 'detalle.id_venta = venta.id', 'inner') // Join con detalle
+            ->join('producto', 'producto.id = detalle.id_producto', 'left') // Join con producto
+            ->where('venta.id_cliente', $id_cliente) // Filtrar por cliente
+            ->where('venta.estado', 1) // Solo ventas activas
+            ->orderBy('venta.fechaCreacion', 'DESC') // Ordenar por fecha de venta
+            ->findAll(); // Obtener todas las ventas
+    
+        if (empty($ventas)) {
+            return $this->respond(['message' => 'No se encontraron ventas para este cliente.'], 404);
+        }
+    
+        // Devolver el array directamente
+        return $this->respond($ventas);
+    }
+    
+    
     public function create()
     {
         // Reglas de validación
@@ -234,15 +258,6 @@ class Venta extends ResourceController
     public function productosMasVendidos()
     {
         $model = new DetalleModel();
-
-
-
-
-
-        // $data['ventas'] = $model->where('estado', 1)->join('producto', 'producto.id = detalle.id_producto', 'left')->findAll();
-
-        // return $this->respond($data);
-
         $data['ventas'] = $model
             ->select('detalle.*, producto.nombre as producto_nombre, producto.precio as producto_precio') // Selecciona campos de ambas tablas
             ->where('detalle.estado', 1) // Filtra solo los detalles activos
