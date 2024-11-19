@@ -22,6 +22,9 @@ $routes->group('/api', ['filter' => 'cors'], static function (RouteCollection $r
     $routes->resource('comprobante');
     $routes->post('subir-imagen', 'Producto::uploadImg');
     $routes->get('reporte/ventas', 'Venta::obtenerReporteVentas');
+    $routes->get('reporte/ventas-por-categoria', 'Venta::ventasPorCategoria');
+
+
     $routes->get('reporte/mas-vendidos', 'Venta::productosMasVendidos');
     $routes->get('cliente-search', 'Cliente::filterClients');
     $routes->get('ventas/cliente/(:num)', 'Venta::ventasPorCliente/$1');

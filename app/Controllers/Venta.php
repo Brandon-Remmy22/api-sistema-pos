@@ -43,7 +43,7 @@ class Venta extends ResourceController
     public function ventasPorCliente($id_cliente)
     {
         $model = new VentaModel();
-    
+
         $ventas = $model
             ->select('venta.id as venta_id, venta.fechaCreacion, venta.total, 
                       detalle.cantidad, producto.nombre as producto_nombre, 
@@ -54,16 +54,16 @@ class Venta extends ResourceController
             ->where('venta.estado', 1) // Solo ventas activas
             ->orderBy('venta.fechaCreacion', 'DESC') // Ordenar por fecha de venta
             ->findAll(); // Obtener todas las ventas
-    
+
         if (empty($ventas)) {
             return $this->respond(['message' => 'No se encontraron ventas para este cliente.'], 404);
         }
-    
+
         // Devolver el array directamente
         return $this->respond($ventas);
     }
-    
-    
+
+
     public function create()
     {
         // Reglas de validación
@@ -211,24 +211,38 @@ class Venta extends ResourceController
 
     public function delete($id = null)
     {
-        $model = new VentaModel();
-        $detalle = new DetalleModel();
+        $ventaModel = new VentaModel();
+        $detalleModel = new DetalleModel();
+        $productoModel = new ProductoModel();
 
         // Verificar si la venta existe
-        $venta = $model->find($id);
+        $venta = $ventaModel->find($id);
         if (!$venta) {
             return $this->failNotFound('Venta no encontrada');
         }
 
+        // Obtener los detalles de la venta
+        $detalles = $detalleModel->where('id_venta', $id)->findAll();
+
+        // Restablecer el stock de los productos
+        foreach ($detalles as $detalle) {
+            $producto = $productoModel->find($detalle['id_producto']);
+
+            if ($producto) {
+                $nuevoStock = $producto['stock'] + $detalle['cantidad'];
+                $productoModel->update($detalle['id_producto'], ['stock' => $nuevoStock]);
+            }
+        }
+
         // Actualizar el estado de todos los detalles asociados a la venta
-        $detalle->where('id_venta', $id)->set(['estado' => 0])->update();
+        $detalleModel->where('id_venta', $id)->set(['estado' => 0])->update();
 
         // Realizar la eliminación lógica de la venta
         $data = ['estado' => 0];
-        if ($model->update($id, $data)) {
-            return $this->respondDeleted(['message' => 'Venta eliminada lógicamente']);
+        if ($ventaModel->update($id, $data)) {
+            return $this->respondDeleted(['message' => 'Venta anulada y stock restablecido']);
         } else {
-            return $this->failServerError('No se pudo eliminar la Venta');
+            return $this->failServerError('No se pudo anular la venta');
         }
     }
 
@@ -251,6 +265,25 @@ class Venta extends ResourceController
             'ventas_por_dia' => $totalVentasPorDia,
             'stock' => $totalStock['stock']
         ];
+
+        return $this->respond($data);
+    }
+
+    public function ventasPorCategoria()
+    {
+        $model = new DetalleModel();
+
+        $data = $model
+            ->select('categoria.nombre AS categoria, 
+                  SUM(detalle.cantidad) AS total_cantidad_vendida, 
+                  SUM(detalle.cantidad * detalle.precio) AS total_ingresos')
+            ->join('producto', 'producto.id = detalle.id_producto', 'inner')
+            ->join('categoria', 'categoria.id = producto.id_categoria', 'inner')
+            ->join('venta', 'venta.id = detalle.id_venta', 'inner')
+            ->where('venta.estado', 1) // Solo ventas activas
+            ->groupBy('categoria.id, categoria.nombre')
+            ->orderBy('total_ingresos', 'DESC')
+            ->findAll();
 
         return $this->respond($data);
     }
